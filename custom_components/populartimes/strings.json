@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add Popular Times Sensor",
+        "description": "Enter the address of a place and the URL of your Playwright CDP browser.",
+        "data": {
+          "address": "Address",
+          "cdp_url": "Playwright CDP URL",
+          "name": "Sensor name (optional)",
+          "skip_live_check": "Skip live data check"
+        },
+        "data_description": {
+          "address": "Full address including place name, e.g. \"McDonald's, Main Street 1, Berlin\"",
+          "cdp_url": "URL of your stealth Playwright browser CDP endpoint",
+          "name": "Leave empty to use the place name from Google Maps",
+          "skip_live_check": "Add the sensor even if no popularity data is available (e.g. place is currently closed)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to the Playwright CDP browser. Check the URL.",
+      "no_data": "No popular times data found for this address. Check the address or enable 'Skip live data check'.",
+      "unknown": "An unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "This place is already configured."
+    }
+  }
+}

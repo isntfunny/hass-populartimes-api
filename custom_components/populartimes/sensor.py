@@ -1,104 +1,168 @@
-"""Support for Google Places API."""
-from datetime import datetime, timedelta
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.const import (CONF_NAME,CONF_ADDRESS)
-from homeassistant.helpers.entity import Entity
-from requests.exceptions import ConnectionError as ConnectError, HTTPError, Timeout
-import homeassistant.helpers.config_validation as cv
+"""Sensor platform for Popular Times."""
+
+from __future__ import annotations
+
 import logging
-import livepopulartimes
-import voluptuous as vol
+from datetime import datetime
+
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+
+from .const import DAYS_EN, DOMAIN
+from .coordinator import PopularTimesCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_NAME): cv.string,
-        vol.Required(CONF_ADDRESS): cv.string,
-    }
-)
 
-SCAN_INTERVAL = timedelta(minutes=10)
+def _get_historical_now(data: dict | None) -> int | None:
+    """Get historical popularity for the current day and hour."""
+    if not data:
+        return None
+    popular_times = data.get("popular_times", {})
+    now = datetime.now()
+    day_name = DAYS_EN[now.weekday()]
+    hours = popular_times.get(day_name, [0] * 24)
+    if now.hour < len(hours):
+        return hours[now.hour]
+    return None
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    name = config['name']
-    address = config['address']
-    add_entities([PopularTimesSensor(name, address)], True)
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up Popular Times sensors from a config entry."""
+    coordinator: PopularTimesCoordinator = hass.data[DOMAIN][entry.entry_id]
+    name = entry.data.get("name", entry.title)
+
+    async_add_entities([
+        CurrentPopularitySensor(coordinator, entry, name),
+        UsualPopularitySensor(coordinator, entry, name),
+        PopularityDifferenceSensor(coordinator, entry, name),
+    ])
 
 
-class PopularTimesSensor(Entity):
+class PopularTimesBaseSensor(CoordinatorEntity[PopularTimesCoordinator], SensorEntity):
+    """Base class for Popular Times sensors."""
 
-    def __init__(self, name, address):
-        self._name = name
-        self._address = address
-        self._state = None
+    _attr_native_unit_of_measurement = "%"
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
-        self._attributes = {
-            'maps_name': None,
-            'address': None,
-            'popularity_is_live': None,
-            'popularity_monday': None,
-            'popularity_tuesday': None,
-            'popularity_wednesday': None,
-            'popularity_thursday': None,
-            'popularity_friday': None,
-            'popularity_saturday': None,
-            'popularity_sunday': None,
+    def __init__(
+        self,
+        coordinator: PopularTimesCoordinator,
+        entry: ConfigEntry,
+        base_name: str,
+        suffix: str,
+        icon: str,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_{suffix}"
+        self._attr_name = f"{base_name} {suffix}"
+        self._attr_icon = icon
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return shared attributes."""
+        if not self.coordinator.data:
+            return {}
+
+        data = self.coordinator.data
+        live = data.get("live", {})
+
+        return {
+            "maps_name": data.get("name"),
+            "address": data.get("address"),
+            "maps_url": data.get("maps_url"),
+            "popularity_is_live": live.get("is_live", False),
         }
 
-    @property
-    def name(self):
-        return self._name
+
+class CurrentPopularitySensor(PopularTimesBaseSensor):
+    """Sensor showing the current (live) popularity."""
+
+    def __init__(
+        self, coordinator: PopularTimesCoordinator, entry: ConfigEntry, name: str
+    ) -> None:
+        """Initialize."""
+        super().__init__(coordinator, entry, name, "current", "mdi:account-group")
 
     @property
-    def state(self):
-        return self._state
-    
-    @property
-    def state_class(self):
-        """Return the state class of the sensor."""
-        return "measurement"  
+    def native_value(self) -> int | None:
+        """Return current popularity. Falls back to historical if no live data."""
+        if not self.coordinator.data:
+            return None
+
+        live = self.coordinator.data.get("live", {})
+        if live.get("is_live"):
+            return live.get("current_pct")
+
+        return _get_historical_now(self.coordinator.data)
 
     @property
-    def unit_of_measurement(self):
-        return '%'
+    def extra_state_attributes(self) -> dict:
+        """Return attributes including per-day historical data."""
+        attrs = super().extra_state_attributes
+        if not self.coordinator.data:
+            return attrs
+
+        popular_times = self.coordinator.data.get("popular_times", {})
+        for day in DAYS_EN:
+            attrs[f"popularity_{day.lower()}"] = popular_times.get(day, [0] * 24)
+
+        return attrs
+
+
+class UsualPopularitySensor(PopularTimesBaseSensor):
+    """Sensor showing the usual (historical) popularity for this hour."""
+
+    def __init__(
+        self, coordinator: PopularTimesCoordinator, entry: ConfigEntry, name: str
+    ) -> None:
+        """Initialize."""
+        super().__init__(coordinator, entry, name, "usual", "mdi:chart-timeline-variant")
 
     @property
-    def state_attributes(self):
-        return self._attributes
+    def native_value(self) -> int | None:
+        """Return the usual popularity for the current hour."""
+        if not self.coordinator.data:
+            return None
 
-    def update(self):
-        """Get the latest data from Google Places API."""
-        try:
+        live = self.coordinator.data.get("live", {})
+        if live.get("is_live") and live.get("usual_pct") is not None:
+            return live.get("usual_pct")
 
-            result = livepopulartimes.get_populartimes_by_address(self._address)
-            popularity = result.get('current_popularity', 0)
-                
-            self._attributes['address'] = result["address"]
-            self._attributes['maps_name'] = result["name"]
-            self._attributes['popularity_monday'] = result["populartimes"][0]["data"]
-            self._attributes['popularity_tuesday'] = result["populartimes"][1]["data"]
-            self._attributes['popularity_wednesday'] = result["populartimes"][2]["data"]
-            self._attributes['popularity_thursday'] = result["populartimes"][3]["data"]
-            self._attributes['popularity_friday'] = result["populartimes"][4]["data"]
-            self._attributes['popularity_saturday'] = result["populartimes"][5]["data"]
-            self._attributes['popularity_sunday'] = result["populartimes"][6]["data"]
+        return _get_historical_now(self.coordinator.data)
 
-            dt = datetime.now()
-            weekdayIndex = dt.weekday()
-            hourIndex = dt.hour
-            historicalDataForWeekday = result["populartimes"][weekdayIndex]["data"]
-            historicalDataForHour = historicalDataForWeekday[hourIndex]
 
-            if popularity != None:
-               self._attributes['popularity_is_live'] = True
+class PopularityDifferenceSensor(PopularTimesBaseSensor):
+    """Sensor showing the difference between current and usual popularity."""
 
-            if popularity == None:
-                popularity = historicalDataForHour
-                self._attributes['popularity_is_live'] = False
-                _LOGGER.warning("Current popularity info is not live but based on historical data.")
+    def __init__(
+        self, coordinator: PopularTimesCoordinator, entry: ConfigEntry, name: str
+    ) -> None:
+        """Initialize."""
+        super().__init__(coordinator, entry, name, "difference", "mdi:swap-vertical")
 
-            self._state = popularity
-                
-        except:
-            _LOGGER.error("No popularity info is returned by the populartimes library.")
+    @property
+    def native_value(self) -> int | None:
+        """Return the difference: current - usual. Positive = busier than normal."""
+        if not self.coordinator.data:
+            return None
+
+        live = self.coordinator.data.get("live", {})
+        if not live.get("is_live"):
+            return 0
+
+        current = live.get("current_pct")
+        usual = live.get("usual_pct") or _get_historical_now(self.coordinator.data)
+
+        if current is not None and usual is not None:
+            return current - usual
+        return None
