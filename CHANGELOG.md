@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is intentionally simple so entries can also be reused in GitHub and HACS release notes.
 
+## [1.1.1] - 2026-04-05
+
+### Added
+- No user-facing features added in this release.
+
+### Changed
+- Change the `current` popularity sensor to only report a value when Google Maps provides live popularity data.
+
+### Fixed
+- Prevent the `current` popularity sensor from falling back to the historical `usual` value when live data is unavailable.
+
 ## [1.1.0] - 2026-04-05
 
 ### Added

@@ -70,7 +70,11 @@ The integration creates multiple entities per configured place:
 
 ## Live vs historical data
 
-Sometimes Google Maps does not provide live popularity data for a place. In that case, historical data is used to set the sensor state. The attribute `popularity_is_live` indicates which data source is active.
+Sometimes Google Maps does not provide live popularity data for a place.
+
+- the `current` sensor is only populated when live data is available
+- the `usual` sensor continues to expose the historical value for the current hour
+- the attribute `popularity_is_live` indicates whether Google is currently reporting live data
 
 ## Extra entities
 

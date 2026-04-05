@@ -99,7 +99,7 @@ class CurrentPopularitySensor(PopularTimesBaseSensor):
 
     @property
     def native_value(self) -> int | None:
-        """Return current popularity. Falls back to historical if no live data."""
+        """Return current popularity only when live data is available."""
         if not self.coordinator.data:
             return None
 
@@ -107,7 +107,7 @@ class CurrentPopularitySensor(PopularTimesBaseSensor):
         if live.get("is_live"):
             return live.get("current_pct")
 
-        return _get_historical_now(self.coordinator.data)
+        return None
 
     @property
     def extra_state_attributes(self) -> dict:
