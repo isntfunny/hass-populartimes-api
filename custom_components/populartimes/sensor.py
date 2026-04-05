@@ -7,14 +7,13 @@ import logging
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, DAYS_EN
 from .coordinator import PopularTimesCoordinator
+from .entity import make_device_info
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,13 +66,7 @@ class PopularTimesBaseSensor(CoordinatorEntity[PopularTimesCoordinator], SensorE
         self._attr_unique_id = f"{entry.entry_id}_{suffix}"
         self._attr_name = f"{base_name} {suffix}"
         self._attr_icon = icon
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.entry_id)},
-            name=base_name,
-            entry_type=DeviceEntryType.SERVICE,
-            manufacturer="Google Maps",
-            configuration_url=entry.data.get("maps_url"),
-        )
+        self._attr_device_info = make_device_info(entry, base_name)
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -89,6 +82,9 @@ class PopularTimesBaseSensor(CoordinatorEntity[PopularTimesCoordinator], SensorE
             "address": data.get("address"),
             "maps_url": data.get("maps_url"),
             "popularity_is_live": live.get("is_live", False),
+            "last_poll_source": self.coordinator.last_poll_source,
+            "last_poll_at": self.coordinator.last_poll_at,
+            "polling_enabled": self.coordinator.polling_enabled,
         }
 
 

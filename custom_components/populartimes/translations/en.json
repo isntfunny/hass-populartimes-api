@@ -41,5 +41,22 @@
         }
       }
     }
+  },
+  "entity": {
+    "button": {
+      "refresh": {
+        "name": "Refresh"
+      }
+    },
+    "switch": {
+      "automatic_polling": {
+        "name": "Automatic polling"
+      }
+    },
+    "event": {
+      "poll_event": {
+        "name": "Poll event"
+      }
+    }
   }
 }

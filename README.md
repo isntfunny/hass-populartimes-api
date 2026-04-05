@@ -48,7 +48,13 @@ You will be asked for:
 
 ## Sensors
 
-The integration creates a sensor with the current popularity percentage as its state.
+The integration creates multiple entities per configured place:
+
+- sensors for current, usual, and difference popularity
+- binary sensors for live data availability and open/closed state
+- a refresh button for manual scraping
+- a switch to enable or disable automatic polling
+- an event entity for successful and failed polls
 
 ### Attributes
 
@@ -65,6 +71,32 @@ The integration creates a sensor with the current popularity percentage as its s
 ## Live vs historical data
 
 Sometimes Google Maps does not provide live popularity data for a place. In that case, historical data is used to set the sensor state. The attribute `popularity_is_live` indicates which data source is active.
+
+## Extra entities
+
+### Refresh button
+
+Each place gets a `refresh` button entity. Pressing it triggers a scrape immediately, even when automatic polling is disabled.
+
+### Automatic polling switch
+
+Each place gets an `automatic polling` switch entity.
+
+- `on`: the coordinator keeps polling on the configured interval
+- `off`: scheduled polling is skipped, but the last known data stays available
+
+### Poll event entity
+
+Each place gets a `poll event` entity with these event types:
+
+- `automatic_poll_completed`
+- `manual_poll_completed`
+- `automatic_poll_failed`
+- `manual_poll_failed`
+
+Successful events include compact scraper output such as place name, address, Maps URL, live popularity values, and open/closed status.
+
+Failed events include the configured address, the error message, and the exception type from the scraper path.
 
 ## Links
 

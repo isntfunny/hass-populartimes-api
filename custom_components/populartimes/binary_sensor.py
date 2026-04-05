@@ -8,24 +8,12 @@ from homeassistant.components.binary_sensor import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceEntryType
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
 from .coordinator import PopularTimesCoordinator
-
-
-def _make_device_info(entry: ConfigEntry, base_name: str) -> DeviceInfo:
-    """Build shared DeviceInfo."""
-    return DeviceInfo(
-        identifiers={(DOMAIN, entry.entry_id)},
-        name=base_name,
-        entry_type=DeviceEntryType.SERVICE,
-        manufacturer="Google Maps",
-        configuration_url=entry.data.get("maps_url"),
-    )
+from .entity import make_device_info
 
 
 async def async_setup_entry(
@@ -59,7 +47,7 @@ class LiveDataAvailableSensor(CoordinatorEntity[PopularTimesCoordinator], Binary
         self._attr_unique_id = f"{entry.entry_id}_live_available"
         self._attr_name = f"{base_name} live"
         self._attr_icon = "mdi:access-point"
-        self._attr_device_info = _make_device_info(entry, base_name)
+        self._attr_device_info = make_device_info(entry, base_name)
 
     @property
     def is_on(self) -> bool | None:
@@ -85,7 +73,7 @@ class OpenClosedSensor(CoordinatorEntity[PopularTimesCoordinator], BinarySensorE
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry.entry_id}_open"
         self._attr_name = f"{base_name} open"
-        self._attr_device_info = _make_device_info(entry, base_name)
+        self._attr_device_info = make_device_info(entry, base_name)
 
     @property
     def is_on(self) -> bool | None:
@@ -106,4 +94,7 @@ class OpenClosedSensor(CoordinatorEntity[PopularTimesCoordinator], BinarySensorE
             attrs["status_text"] = opening["status_text"]
         if opening.get("hours"):
             attrs["opening_hours"] = opening["hours"]
+        attrs["last_poll_source"] = self.coordinator.last_poll_source
+        attrs["last_poll_at"] = self.coordinator.last_poll_at
+        attrs["polling_enabled"] = self.coordinator.polling_enabled
         return attrs

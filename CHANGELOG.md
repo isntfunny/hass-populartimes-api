@@ -1,0 +1,31 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is intentionally simple so entries can also be reused in GitHub and HACS release notes.
+
+## [1.1.0] - 2026-04-05
+
+### Added
+- Add a manual refresh button entity for each configured Popular Times place.
+- Add an automatic polling switch entity for each configured place.
+- Add an event entity for each configured place.
+- Add explicit poll success event types:
+  - `automatic_poll_completed`
+  - `manual_poll_completed`
+- Add explicit poll failure event types:
+  - `automatic_poll_failed`
+  - `manual_poll_failed`
+- Add shared device metadata helper so all entities attach to the same Home Assistant device.
+
+### Changed
+- Extend the integration from sensor/binary sensor only to also expose button, switch, and event platforms.
+- Keep the existing `DataUpdateCoordinator` as the single fetch and cache path.
+- Add coordinator-managed polling state and last poll metadata.
+- Improve entity naming with Home Assistant translation keys for the new entities.
+- Update README documentation for the new entities and poll behavior.
+
+### Fixed
+- Align manual refresh handling with Home Assistant 2026.3 coordinator patterns.
+- Ensure event entities write their state after triggering events.
+- Keep event entities available for poll failure reporting instead of coupling availability to coordinator success state.

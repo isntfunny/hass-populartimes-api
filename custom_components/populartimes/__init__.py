@@ -9,7 +9,13 @@ from homeassistant.core import HomeAssistant
 from .const import CONF_ADDRESS, CONF_CDP_URL, CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL, DOMAIN
 from .coordinator import PopularTimesCoordinator
 
-PLATFORMS: list[Platform] = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS: list[Platform] = [
+    Platform.BINARY_SENSOR,
+    Platform.BUTTON,
+    Platform.EVENT,
+    Platform.SENSOR,
+    Platform.SWITCH,
+]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -18,6 +24,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = PopularTimesCoordinator(
         hass,
+        entry=entry,
         cdp_url=entry.data[CONF_CDP_URL],
         address=entry.data[CONF_ADDRESS],
         scan_interval_min=scan_interval,
