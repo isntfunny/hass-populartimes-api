@@ -4,7 +4,7 @@
   "codeowners": ["@isntfunny"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/isntfunny/hass-populartimes-api",
+  "documentation": "https://github.com/isntfunny/hass-populartimes-cdp",
   "iot_class": "cloud_polling",
   "requirements": ["pychrome>=0.2.4"],
   "version": "1.1.3"
