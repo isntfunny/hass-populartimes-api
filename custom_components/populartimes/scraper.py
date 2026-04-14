@@ -211,6 +211,7 @@ def _create_target_tab(cdp_url: str) -> tuple[pychrome.Tab, str]:
                 return pychrome.Tab(**t), target_id
         time.sleep(0.2)
 
+    _close_target_tab(cdp_url, target_id)
     raise ConnectionFailed(f"New target {target_id} did not appear in /json/list")
 
 
